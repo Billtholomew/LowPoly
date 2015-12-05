@@ -1,0 +1,11 @@
+﻿Build started 5/3/2015 2:35:06 PM.
+     1>Project "C:\Users\William\Desktop\Test\test\test\test.vcxproj" on node 2 (Build target(s)).
+     1>Link:
+         C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\x86_amd64\link.exe /ERRORREPORT:PROMPT /OUT:"C:\Users\William\Desktop\Test\test\x64\Debug\test.exe" /INCREMENTAL /NOLOGO /LIBPATH:C:\opencv\build\x64\vc12\lib opencv_core2411.dll opencv_highgui2411.dll kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"C:\Users\William\Desktop\Test\test\x64\Debug\test.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"C:\Users\William\Desktop\Test\test\x64\Debug\test.lib" /MACHINE:X64 x64\Debug\stdafx.obj
+         x64\Debug\test.obj
+     1>LINK : fatal error LNK1104: cannot open file 'opencv_core2411.dll'
+     1>Done Building Project "C:\Users\William\Desktop\Test\test\test\test.vcxproj" (Build target(s)) -- FAILED.
+
+Build FAILED.
+
+Time Elapsed 00:00:00.09
