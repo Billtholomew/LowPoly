@@ -108,7 +108,10 @@ def wrapper(inName,a,b,c,outName=None,show=False):
         cv2.imshow('Compare',compare)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
-    if outName is not None:
+	if outName is not None:
         cv2.imwrite(outName,lopo)
 
-wrapper('Lenna.jpg',a=50,b=75,c=0.1,outName='test.png')
+if __name__ == "__main__":
+	inFile = sys.argv[1]
+	outFile = sys.argv[2]
+	wrapper(inFile,a=50,b=75,c=0.1,show=True)

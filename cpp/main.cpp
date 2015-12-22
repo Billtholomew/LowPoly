@@ -143,12 +143,12 @@ int fromFile(const char* fName) {
 	cvShowImage("Lo-Poly", &out);
 	waitKey(0);
 	cvDestroyWindow("Lo-Poly");
-	//imwrite("C:/Users/William/Desktop/Art/pel_serial.png",image);
 	return 0;
 }
 
 int main(int argc, const char** argv)
 {
-	//return fromFile("C:/Users/William/Desktop/Art/Lenna.jpg");
+	if (argc>1)
+		return fromFile(argv[1]);
 	return fromCamera();
 }
