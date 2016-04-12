@@ -148,7 +148,7 @@ int fromFile(const char* fName) {
 
 int main(int argc, const char** argv)
 {
-	if (argc>1)
-		return fromFile(argv[1]);
+	//if (argc>1)
+	//	return fromFile(argv[1]);
 	return fromCamera();
 }
