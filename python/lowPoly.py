@@ -1,3 +1,4 @@
+import argparse
 import time
 import sys
 import cv2
@@ -6,18 +7,18 @@ from scipy.spatial import Delaunay
 
 
 def color_triangles(tris, im):
-    # 0.123 s
+    # 34.75% of this function's time
     triangle_vertices = map(lambda vertices: np.array([vertices]), tris.points[tris.vertices].astype(np.int32))
 
-    # 0.035 s
+    # 9.50% of this function's time
     bounding_rectangles = map(lambda vertices: cv2.boundingRect(vertices), triangle_vertices)
 
-    # 0.123 s
+    # 33.77% of this function's time
     triangle_colors = map(lambda (c, r, w, h): cv2.mean(im[r:(r + h), c:(c + w), :]), bounding_rectangles)
 
     im_low_poly = np.zeros(im.shape)
 
-    # 0.067 s
+    # 18.69% of this function's time
     map(lambda (vertices, color): cv2.fillConvexPoly(im_low_poly, vertices, color),
         zip(triangle_vertices, triangle_colors))
 
@@ -46,22 +47,80 @@ def get_triangulation(im, sigma=0.33):
     corners = np.vstack(([0, 0], [0, row_max], [col_max, 0], [col_max, row_max]))
     pts = np.vstack((pts, corners))
 
-    tt = time.time()
     tris = Delaunay(pts)
-    print time.time() - tt
     return tris
 
 
-def wrapper(in_name, out_name=None, show=False):
-
-    oim = cv2.imread(in_name, flags=cv2.CV_LOAD_IMAGE_COLOR)  # ensure we read it in as a color image
+def process_image(oim):
 
     t = time.time()
-    sigma = 0.33
+    sigma = 0.50
     triangle_data = get_triangulation(oim, sigma)
     im_low_poly = color_triangles(triangle_data, oim)
-    print 'Total:', time.time() - t
+    process_time = time.time() - t
 
+    return im_low_poly, process_time
+
+
+def get_image(file_name=None, camera=None, resize_factor=1):
+    if camera is not None:
+        retval, oim = camera.read()
+    elif file_name is not None:
+        oim = cv2.imread(file_name, flags=cv2.CV_LOAD_IMAGE_COLOR)  # ensure we read it in as a color image
+    else:
+        raise Exception('No source provided, cannot read in image')
+    # scale image down for faster processing
+    if resize_factor != 1:
+        oim = cv2.resize(oim, (0, 0), fx=resize_factor, fy=resize_factor,
+                         interpolation=cv2.INTER_LINEAR)
+    return oim
+
+
+def process_from_camera_feed(resize_factor=1):
+    camera = None
+    try:
+        camera_port = 0
+        camera = cv2.VideoCapture(camera_port)
+        start_time = time.time()
+        time.sleep(1)
+        total_frames = 0
+        while True:
+            total_frames += 1
+            frame_rate = total_frames / (time.time() - start_time)
+            if frame_rate < 25:
+                continue
+            oim = get_image(camera=camera, resize_factor=resize_factor)
+            im_low_poly, process_time = process_image(oim)
+
+            # scale image back up
+            if resize_factor != 1:
+                oim = cv2.resize(oim, (0, 0), fx=resize_factor, fy=resize_factor,
+                                 interpolation=cv2.INTER_CUBIC)
+                im_low_poly = cv2.resize(im_low_poly, (0, 0), fx=resize_factor, fy=resize_factor,
+                                         interpolation=cv2.INTER_LINEAR)
+
+            cv2.namedWindow('Compare', flags=cv2.WINDOW_NORMAL)
+            compare = np.hstack([oim, im_low_poly])
+            cv2.imshow('Compare', compare)
+            if cv2.waitKey(30) >= 0:
+                break
+    except Exception, e:
+        print e
+    finally:
+        del camera
+        cv2.destroyAllWindows()
+
+
+def process_from_single_file(in_name=None, out_name=None, show=False, resize_factor=1):
+    oim = get_image(file_name=in_name, resize_factor=resize_factor)
+    im_low_poly, _ = process_image(oim)
+
+    # scale image back up
+    if resize_factor != 1:
+        oim = cv2.resize(oim, (0, 0), fx=1 / resize_factor, fy=1 / resize_factor,
+                         interpolation=cv2.INTER_CUBIC)
+        im_low_poly = cv2.resize(im_low_poly, (0, 0), fx=1 / resize_factor, fy=1 / resize_factor,
+                                 interpolation=cv2.INTER_NEAREST)
 
     if show:
         cv2.namedWindow('Compare', flags=cv2.WINDOW_NORMAL)
@@ -72,16 +131,37 @@ def wrapper(in_name, out_name=None, show=False):
     if out_name is not None:
         cv2.imwrite(out_name, im_low_poly)
 
+
+def main(in_name=None, out_name=None, show=False, resize_factor=1):
+    try:
+        if in_name is not None:
+            process_from_single_file(in_name=in_name, out_name=out_name, show=show, resize_factor=resize_factor)
+        else:
+            process_from_camera_feed(resize_factor=1)
+    except Exception, e:
+        print e
+    finally:
+        cv2.destroyAllWindows()
+
+
+parser = argparse.ArgumentParser(description='Artistically creates a low-polygon version of an image')
+parser.add_argument('--source', '-s', nargs='?', choices=['camera', 'file'], dest='source', required=True,
+                    help='where to get image from, if "file" --input <full path> is required')
+parser.add_argument('--input', '-i', nargs='?', dest='iName', const=str, default=None,
+                    help='full path of image to process')
+parser.add_argument('--output', '-o', nargs='?', dest='oName', const=str, default=None,
+                    help='full path of image to process')
+parser.add_argument('--view', '-v', nargs='?', dest='show', const=bool, default=True,
+                    help='boolean to view image or not, Default: True')
+args = parser.parse_args()
+
 if __name__ == '__main__':
-    if len(sys.argv) < 2:
-        print 'Usage'
-        print 'lowPoly.py <infile> [outfile]'
-        print 'Example'
-        print 'lowPoly.py ../data/Lenna.png'
-        print 'lowPoly.py ../data/Lenna.png imOut.png'
-    else:
-        inFile = sys.argv[1]
-        outFile = None
-        if len(sys.argv) == 3:
-            outFile = sys.argv[2]
-        wrapper(in_name=inFile, out_name=outFile, show=True)
+    if args.source == 'camera':
+        if args.iName is not None:
+            print 'Reading from camera. Option "--input/-i', args.fName+'"','will be ignored'
+        main(in_name=None, out_name=None, show=True, resize_factor=1)
+    elif args.source == 'file':
+        if args.iName is not None:
+            main(in_name=args.iName, out_name=args.oName, show=args.show, resize_factor=1)
+        else:
+            print 'ERROR: With source set to "file", --input/-i must be set to the full path to file'
