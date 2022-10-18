@@ -1,6 +1,5 @@
 import argparse
 import time
-import sys
 import cv2
 import numpy as np
 from scipy.spatial import Delaunay
@@ -14,12 +13,12 @@ def color_triangles(tris, im):
     bounding_rectangles = map(lambda vertices: cv2.boundingRect(vertices), triangle_vertices)
 
     # 33.77% of this function's time
-    triangle_colors = map(lambda (c, r, w, h): cv2.mean(im[r:(r + h), c:(c + w), :]), bounding_rectangles)
+    triangle_colors = map(lambda c, r, w, h: cv2.mean(im[r:(r + h), c:(c + w), :]), bounding_rectangles)
 
     im_low_poly = np.zeros(im.shape)
 
     # 18.69% of this function's time
-    map(lambda (vertices, color): cv2.fillConvexPoly(im_low_poly, vertices, color),
+    map(lambda vertices, color: cv2.fillConvexPoly(im_low_poly, vertices, color),
         zip(triangle_vertices, triangle_colors))
 
     return im_low_poly.astype(np.uint8)
@@ -39,7 +38,7 @@ def get_triangulation(im, sigma=0.33):
     edges = auto_canny(im, sigma)
     contours, _ = cv2.findContours(edges, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
     epsilons = map(lambda x: 0.001 * cv2.arcLength(x, True), contours)
-    contours = map(lambda (contour, epsilon): cv2.approxPolyDP(contour, epsilon, True), zip(contours, epsilons))
+    contours = map(lambda contour, epsilon: cv2.approxPolyDP(contour, epsilon, True), zip(contours, epsilons))
     pts = np.vstack(map(lambda c: np.array(c).reshape((-1, 2)), contours))
     # now add the four corners, to get better results at corners
     # note that contours is in [x, y] NOT [r, c], so when adding corners, we also need to flip the r/c
@@ -104,8 +103,8 @@ def process_from_camera_feed(resize_factor=1):
             cv2.imshow('Compare', compare)
             if cv2.waitKey(30) >= 0:
                 break
-    except Exception, e:
-        print e
+    except Exception as e:
+        print(e)
     finally:
         del camera
         cv2.destroyAllWindows()
@@ -138,8 +137,8 @@ def main(in_name=None, out_name=None, show=False, resize_factor=1):
             process_from_single_file(in_name=in_name, out_name=out_name, show=show, resize_factor=resize_factor)
         else:
             process_from_camera_feed(resize_factor=1)
-    except Exception, e:
-        print e
+    except Exception as e:
+        print(e)
     finally:
         cv2.destroyAllWindows()
 
@@ -158,10 +157,10 @@ args = parser.parse_args()
 if __name__ == '__main__':
     if args.source == 'camera':
         if args.iName is not None:
-            print 'Reading from camera. Option "--input/-i', args.fName+'"','will be ignored'
+            print(f'Reading from camera. Option "--input/-i {args.fName} will be ignored')
         main(in_name=None, out_name=None, show=True, resize_factor=1)
     elif args.source == 'file':
         if args.iName is not None:
             main(in_name=args.iName, out_name=args.oName, show=args.show, resize_factor=1)
         else:
-            print 'ERROR: With source set to "file", --input/-i must be set to the full path to file'
+            print('ERROR: With source set to "file", --input/-i must be set to the full path to file')
